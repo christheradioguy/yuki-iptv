@@ -1,0 +1,33 @@
+Source: yuki-iptv
+Section: video
+Priority: optional
+Maintainer: Liya Astrova <liyaastrova@proton.me>
+Build-Depends: debhelper (>= 9)
+Standards-Version: 3.9.6
+Rules-Requires-Root: no
+
+Package: yuki-iptv
+Architecture: all
+Depends: ffmpeg (>= 4.2.7),
+         libmpv2 | libmpv1 (>= 0.32.0-1),
+         python3 (>= 3.8.0-1),
+         python3-requests,
+         python3-chardet,
+         python3-setproctitle,
+         python3-pyqt6 (>= 6.2.2) | python3-pyqt5 (>= 5.14.1),
+         python3-wand,
+         python3-gi,
+         python3-unidecode,
+         yt-dlp | youtube-dl
+Recommends: libmagickcore-6.q16-6-extra, qt6-translations-l10n
+Description: IPTV player with EPG support
+ yuki-iptv is an IPTV player with many features, such as:
+  * M3u / M3u8 / XSPF playlists support
+  * XTream API support
+  * TV program (EPG) support in XMLTV and JTV formats
+  * Save channels as favorites
+  * Stream recording
+  * Channel groups
+  * Playlist editor
+  * TV archive / catchup
+  * ...
