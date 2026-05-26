@@ -1,17 +1,17 @@
-# Fork of yuki IPTV
+# Fork of Yuki IPTV
 
-This is a fork of the prigional project which does the folowing:
+This is a fork of the origional project which does the folowing:
 
 - Removes the progress bars (I find them annoying)
-- Increases the timeouts for connecting to IPTV streams (it seems to be about 5 seconds by default which is insufficient for programs like Streamlink)
+- Increases the timeouts for connecting to IPTV streams (it seems to be about 5 seconds by default which is insufficient for programs like Streamlink which have a long startup)
 
 # Building
-To build a debian package:
+To build a Debian package:
 - `dpkg-buildpackage -us -uc -b` the built file will be saved at ../yuki-iptv_0.0.12_all.deb
 
 
-# Origonal README
-The origional README for this project can be found below:
+# Original README
+The original README for this project can be found below:
 
 
 # yuki-iptv
