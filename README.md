@@ -7,7 +7,7 @@ This is a fork of the origional project which does the folowing:
 
 # Building
 To build a Debian package:
-- `dpkg-buildpackage -us -uc -b` the built file will be saved at ../yuki-iptv_0.0.12_all.deb
+- `dpkg-buildpackage -us -uc -b` the built file will be saved at ../yuki-iptv_0.0.13_all.deb
 
 
 # Original README

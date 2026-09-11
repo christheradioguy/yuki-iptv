@@ -44,6 +44,15 @@ def has_tvg_group(group, expected_group):
     return expected_group in split_tvg_groups(group)
 
 
+def merge_tvg_groups(*groups):
+    res = []
+    for group in groups:
+        for group_item in split_tvg_groups(group):
+            if group_item not in res:
+                res.append(group_item)
+    return "; ".join(res)
+
+
 def is_vod_group(group):
     for group_item in split_tvg_groups(group):
         group_item_lower = group_item.lower()

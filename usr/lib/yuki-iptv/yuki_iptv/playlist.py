@@ -28,7 +28,12 @@ import traceback
 from yuki_iptv.qt import get_qt_library, show_exception
 from yuki_iptv.xtreamtom3u import convert_xtream_to_m3u
 from yuki_iptv.requests_timeout import requests_get
-from yuki_iptv.m3u import M3UParser, is_vod_group, split_tvg_groups
+from yuki_iptv.m3u import (
+    M3UParser,
+    is_vod_group,
+    merge_tvg_groups,
+    split_tvg_groups,
+)
 from yuki_iptv.xspf import parse_xspf
 from yuki_iptv.series import parse_series
 from thirdparty.xtream import Serie
@@ -43,6 +48,19 @@ class PlaylistsFail:
 
 class EmptyClass:
     pass
+
+
+def merge_playlist_entry(existing_entry, new_entry):
+    merged_entry = existing_entry.copy()
+    merged_entry["tvg-group"] = merge_tvg_groups(
+        existing_entry.get("tvg-group", ""), new_entry.get("tvg-group", "")
+    )
+    for entry_key, entry_value in new_entry.items():
+        if entry_key == "tvg-group":
+            continue
+        if not merged_entry.get(entry_key) and entry_value:
+            merged_entry[entry_key] = entry_value
+    return merged_entry
 
 
 def load_playlist(_, settings, YukiData, load_xtream, channel_sets, channel_sort):
@@ -232,7 +250,12 @@ def load_playlist(_, settings, YukiData, load_xtream, channel_sets, channel_sort
             for m3u_datai in m3u_data_got:
                 if "tvg-group" in m3u_datai:
                     if is_vod_group(m3u_datai["tvg-group"]):
-                        YukiData.movies[m3u_datai["title"]] = m3u_datai
+                        if m3u_datai["title"] in YukiData.movies:
+                            YukiData.movies[m3u_datai["title"]] = merge_playlist_entry(
+                                YukiData.movies[m3u_datai["title"]], m3u_datai
+                            )
+                        else:
+                            YukiData.movies[m3u_datai["title"]] = m3u_datai
                     else:
                         YukiData.series, is_matched = parse_series(
                             m3u_datai, YukiData.series
@@ -244,8 +267,13 @@ def load_playlist(_, settings, YukiData, load_xtream, channel_sets, channel_sort
             if epg_url and not settings["epg"]:
                 settings["epg"] = epg_url
             for m3u_line in m3u_data:
-                array[m3u_line["title"]] = m3u_line
-                for group in split_tvg_groups(m3u_line["tvg-group"]):
+                if m3u_line["title"] in array:
+                    array[m3u_line["title"]] = merge_playlist_entry(
+                        array[m3u_line["title"]], m3u_line
+                    )
+                else:
+                    array[m3u_line["title"]] = m3u_line
+                for group in split_tvg_groups(array[m3u_line["title"]]["tvg-group"]):
                     if group not in groups:
                         groups.append(group)
         except Exception:

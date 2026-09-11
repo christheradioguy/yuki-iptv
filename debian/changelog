@@ -1,3 +1,9 @@
+yuki-iptv (0.0.13) unstable; urgency=medium
+
+  * Fix multi-tag group handling for duplicate playlist entries
+
+ -- Christopher Munz-Michielin <christopher@chris-desk01.ipa.10vpn.net>  Fri, 11 Sep 2026 23:59:59 +0000
+
 yuki-iptv (0.0.12) unstable; urgency=medium
 
   * Translations update from Weblate
