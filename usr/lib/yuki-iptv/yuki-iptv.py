@@ -107,6 +107,7 @@ from yuki_iptv.channel_logos import channel_logos_worker, get_custom_channel_log
 from yuki_iptv.settings import parse_settings
 from yuki_iptv.qt6compat import _exec
 from yuki_iptv.playlist_editor import PlaylistEditor
+from yuki_iptv.m3u import has_tvg_group, split_tvg_groups
 from yuki_iptv.options import read_option, write_option
 from yuki_iptv.keybinds import main_keybinds_internal, main_keybinds_default
 from yuki_iptv.xdg import LOCAL_DIR, SAVE_FOLDER_DEFAULT
@@ -3787,7 +3788,7 @@ if __name__ == "__main__":
                         if j1 not in YukiData.favourite_sets:
                             continue
                     else:
-                        if group1 != YukiData.current_group:
+                        if not has_tvg_group(group1, YukiData.current_group):
                             continue
                 array_filtered.append(j1)
 
@@ -4605,9 +4606,9 @@ if __name__ == "__main__":
                     movie_logos_request = {}
                     for movies1 in YukiData.movies:
                         if "tvg-group" in YukiData.movies[movies1]:
-                            if (
-                                YukiData.movies[movies1]["tvg-group"]
-                                == current_movies_group
+                            if has_tvg_group(
+                                YukiData.movies[movies1]["tvg-group"],
+                                current_movies_group,
                             ):
                                 MovieWidget = YukiGUI.PlaylistWidget(
                                     YukiGUI, YukiData.settings["hidechannellogos"]
@@ -4698,8 +4699,11 @@ if __name__ == "__main__":
         movies_combobox = QtWidgets.QComboBox()
         for movie_combobox in YukiData.movies:
             if "tvg-group" in YukiData.movies[movie_combobox]:
-                if YukiData.movies[movie_combobox]["tvg-group"] not in movies_groups:
-                    movies_groups.append(YukiData.movies[movie_combobox]["tvg-group"])
+                for movie_group in split_tvg_groups(
+                    YukiData.movies[movie_combobox]["tvg-group"]
+                ):
+                    if movie_group not in movies_groups:
+                        movies_groups.append(movie_group)
         for movie_group in movies_groups:
             movies_combobox.addItem(movie_group)
         movies_combobox.currentIndexChanged.connect(movies_group_change)
@@ -6420,13 +6424,10 @@ if __name__ == "__main__":
         def saveLastChannel():
             if YukiData.playing_url and playmode_selector.currentIndex() == 0:
                 current_group_0 = 0
-                if YukiData.combobox.currentIndex() != 0:
-                    try:
-                        current_group_0 = groups.index(
-                            YukiData.array[YukiData.playing_channel]["tvg-group"]
-                        )
-                    except Exception:
-                        pass
+                try:
+                    current_group_0 = YukiData.combobox.currentIndex()
+                except Exception:
+                    pass
                 current_channel_0 = 0
                 try:
                     current_channel_0 = win.listWidget.currentRow()

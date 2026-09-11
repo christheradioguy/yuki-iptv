@@ -26,6 +26,35 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+GROUP_SPLIT_RE = re.compile(r"\s*[;,|]\s*")
+
+
+def split_tvg_groups(group):
+    if not group:
+        return []
+    res = []
+    for group_item in GROUP_SPLIT_RE.split(group.strip()):
+        group_item = group_item.strip()
+        if group_item and group_item not in res:
+            res.append(group_item)
+    return res
+
+
+def has_tvg_group(group, expected_group):
+    return expected_group in split_tvg_groups(group)
+
+
+def is_vod_group(group):
+    for group_item in split_tvg_groups(group):
+        group_item_lower = group_item.lower()
+        if (
+            group_item_lower == "vod"
+            or group_item_lower.startswith("vod ")
+            or group_item_lower.endswith(" vod")
+        ):
+            return True
+    return False
+
 
 class M3UParser:
     """M3U parser"""

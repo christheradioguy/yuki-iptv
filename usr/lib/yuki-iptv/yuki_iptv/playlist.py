@@ -28,7 +28,7 @@ import traceback
 from yuki_iptv.qt import get_qt_library, show_exception
 from yuki_iptv.xtreamtom3u import convert_xtream_to_m3u
 from yuki_iptv.requests_timeout import requests_get
-from yuki_iptv.m3u import M3UParser
+from yuki_iptv.m3u import M3UParser, is_vod_group, split_tvg_groups
 from yuki_iptv.xspf import parse_xspf
 from yuki_iptv.series import parse_series
 from thirdparty.xtream import Serie
@@ -231,11 +231,7 @@ def load_playlist(_, settings, YukiData, load_xtream, channel_sets, channel_sort
 
             for m3u_datai in m3u_data_got:
                 if "tvg-group" in m3u_datai:
-                    if (
-                        m3u_datai["tvg-group"].lower() == "vod"
-                        or m3u_datai["tvg-group"].lower().startswith("vod ")
-                        or m3u_datai["tvg-group"].lower().endswith(" vod")
-                    ):
+                    if is_vod_group(m3u_datai["tvg-group"]):
                         YukiData.movies[m3u_datai["title"]] = m3u_datai
                     else:
                         YukiData.series, is_matched = parse_series(
@@ -249,8 +245,9 @@ def load_playlist(_, settings, YukiData, load_xtream, channel_sets, channel_sort
                 settings["epg"] = epg_url
             for m3u_line in m3u_data:
                 array[m3u_line["title"]] = m3u_line
-                if m3u_line["tvg-group"] not in groups:
-                    groups.append(m3u_line["tvg-group"])
+                for group in split_tvg_groups(m3u_line["tvg-group"]):
+                    if group not in groups:
+                        groups.append(group)
         except Exception:
             logger.warning("Playlist parsing error!" + "\n" + traceback.format_exc())
             show_exception(traceback.format_exc(), _("Playlist loading error!"))
@@ -279,8 +276,11 @@ def load_playlist(_, settings, YukiData, load_xtream, channel_sets, channel_sort
                         array[ch3]["tvg-group"] = channel_sets[settings["m3u"]][ch3][
                             "group"
                         ]
-                        if channel_sets[settings["m3u"]][ch3]["group"] not in groups:
-                            groups.append(channel_sets[settings["m3u"]][ch3]["group"])
+                        for group in split_tvg_groups(
+                            channel_sets[settings["m3u"]][ch3]["group"]
+                        ):
+                            if group not in groups:
+                                groups.append(group)
                 if "hidden" in channel_sets[settings["m3u"]][ch3]:
                     if channel_sets[settings["m3u"]][ch3]["hidden"]:
                         array.pop(ch3)
