@@ -488,6 +488,7 @@ if __name__ == "__main__":
                 os.remove(str(Path(LOCAL_DIR, "epg.cache")))
             YukiData.use_local_tvguide = False
             if not YukiData.epg_updating:
+                YukiData.epg_failed = False
                 YukiData.first_boot = False
 
         YukiData.epg_update_allowed = True
@@ -6856,13 +6857,19 @@ if __name__ == "__main__":
                         if not is_program_actual(
                             YukiData.programmes, YukiData.epg_ready
                         ):
-                            raise Exception("Programme not actual")
-                        thread_tvguide_update_pt2_1()
-                        YukiData.prog_ids = YukiData.epg_data[5]
-                        YukiData.epg_icons = YukiData.epg_data[6]
-                        YukiData.tvguide_sets = YukiData.programmes
-                        save_tvguide_sets()
-                        btn_update_click()  # start update in main thread
+                            logger.warning(
+                                "[TV guide, part 2] EPG has no current programmes,"
+                                " will retry on next obsolete check"
+                            )
+                            # Not a fatal error — don't set epg_failed;
+                            # timer_check_tvguide_obsolete will trigger a retry.
+                        else:
+                            thread_tvguide_update_pt2_1()
+                            YukiData.prog_ids = YukiData.epg_data[5]
+                            YukiData.epg_icons = YukiData.epg_data[6]
+                            YukiData.tvguide_sets = YukiData.programmes
+                            save_tvguide_sets()
+                            btn_update_click()  # start update in main thread
                     except Exception as e2:
                         YukiData.epg_failed = True
                         logger.warning(

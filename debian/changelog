@@ -1,3 +1,11 @@
+yuki-iptv (0.0.13.1) unstable; urgency=medium
+
+  * Fix EPG not reloading after initial load: 'Programme not actual' no
+    longer permanently sets epg_failed; force_update_epg now clears
+    epg_failed so automatic retries recover from transient failures
+
+ -- Christopher Munz-Michielin <christopher@chris-desk01.ipa.10vpn.net>  Fri, 25 Sep 2026 19:50:00 +0000
+
 yuki-iptv (0.0.13) unstable; urgency=medium
 
   * Fix multi-tag group handling for duplicate playlist entries
