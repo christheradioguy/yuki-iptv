@@ -177,13 +177,18 @@ def is_program_actual(sets0, epg_ready, force=False, future=False):
         current_time = time.time() + 86400  # 1 day
     else:
         current_time = time.time()
-    if sets0:
-        for prog1 in sets0:
-            pr1 = sets0[prog1]
-            for p in pr1:
-                if current_time > p["start"] and current_time < p["stop"]:
-                    return True
-    return False
+    if not sets0:
+        return False
+    total_channels = len(sets0)
+    channels_with_data = 0
+    for prog1 in sets0:
+        pr1 = sets0[prog1]
+        for p in pr1:
+            if current_time > p["start"] and current_time < p["stop"]:
+                channels_with_data += 1
+                break  # only count once per channel
+    # Cache is valid only if at least 25% of channels have current program data
+    return (channels_with_data / total_channels) >= 0.25
 
 
 def load_epg_cache(settings_m3u, settings_epg, epg_ready):
