@@ -187,12 +187,12 @@ def is_program_actual(sets0, epg_ready, force=False, future=False):
             if current_time > p["start"] and current_time < p["stop"]:
                 channels_with_data += 1
                 break  # only count once per channel
-    # Cache is valid only if at least 10% of channels have current program data
+    # Cache is valid only if at least 60% of channels have current program data
     logger.info(
         f"EPG validity check: {channels_with_data}/{total_channels} channels have current program data "
         f"({100 * channels_with_data / total_channels:.1f}%)"
     )
-    return (channels_with_data / total_channels) >= 0.10
+    return (channels_with_data / total_channels) >= 0.60
 
 
 def load_epg_cache(settings_m3u, settings_epg, epg_ready):
