@@ -6855,7 +6855,7 @@ if __name__ == "__main__":
                             for prog0 in YukiData.epg_data[1]
                         }
                         if not is_program_actual(
-                            YukiData.programmes, YukiData.epg_ready
+                            YukiData.programmes, YukiData.epg_ready, log=True
                         ):
                             logger.warning(
                                 "[TV guide, part 2] EPG has no current programmes,"
