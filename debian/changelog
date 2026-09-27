@@ -1,3 +1,9 @@
+yuki-iptv (0.0.13.2) unstable; urgency=medium
+
+  * fix: only log EPG validity check once at EPG load, not every 10s
+
+ -- Chris Munz-Michielin <chris@frc.is>  Sun, 27 Sep 2026 16:26:23 +0000
+
 yuki-iptv (0.0.13.1) unstable; urgency=medium
 
   * Fix EPG not reloading after initial load: 'Programme not actual' no
