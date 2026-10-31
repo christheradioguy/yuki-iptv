@@ -1,3 +1,10 @@
+yuki-iptv (0.0.13.3) unstable; urgency=medium
+
+  * Add a button to record the current channel on a Streams Manager server
+  * New settings: Streams Manager URL and token (Network tab)
+
+ -- Chris Munz-Michielin <chris@frc.is>  Fri, 31 Oct 2026 02:10:00 +0000
+
 yuki-iptv (0.0.13.2) unstable; urgency=medium
 
   * fix: only log EPG validity check once at EPG load, not every 10s
