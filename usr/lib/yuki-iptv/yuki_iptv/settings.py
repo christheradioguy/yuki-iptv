@@ -68,6 +68,8 @@ def parse_settings():
         "zoom": 0,
         "panscan": 0.0,
         "referer": "",
+        "streams_manager_url": "",
+        "streams_manager_token": "",
         "gui": 0,
         "uuid": False,
     }

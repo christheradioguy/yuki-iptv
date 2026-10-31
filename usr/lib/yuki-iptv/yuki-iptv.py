@@ -67,6 +67,14 @@ from yuki_iptv.record import (
     terminate_record_process,
     is_youtube_url,
 )
+from yuki_iptv.remote_record import (
+    channel_id_for,
+    remote_record_start,
+    remote_record_stop,
+    remote_record_status,
+    is_active as remote_record_is_active,
+    RemoteRecordError,
+)
 from yuki_iptv.menubar import (
     init_yuki_iptv_menubar,
     init_menubar_player,
@@ -2127,6 +2135,12 @@ if __name__ == "__main__":
         YukiGUI.scache1.setValue(YukiData.settings["cache_secs"])
         YukiGUI.epgdays.setValue(YukiData.settings["epgdays"])
         YukiGUI.referer_choose.setText(YukiData.settings["referer"])
+        YukiGUI.streams_manager_url_choose.setText(
+            YukiData.settings["streams_manager_url"]
+        )
+        YukiGUI.streams_manager_token_choose.setText(
+            YukiData.settings["streams_manager_token"]
+        )
         YukiGUI.useragent_choose_2.setText(YukiData.settings["ua"])
         YukiGUI.mpv_options.setText(YukiData.settings["mpv_options"])
         YukiGUI.donot_flag.setChecked(YukiData.settings["donotupdateepg"])
@@ -5301,6 +5315,199 @@ if __name__ == "__main__":
                 YukiData.state.show()
                 YukiData.state.setTextYuki(_("No channel selected for record"))
 
+        # -- Recording on the Streams Manager server ------------------------
+        # The server does the recording; this side only starts and stops it
+        # and mirrors its progress on screen the way a local recording does.
+        # Network calls run in a thread and leave their result in YukiData;
+        # timer_remote_record applies it to the GUI from the main thread.
+
+        YukiData.remote_recording = False
+        YukiData.remote_recording_old = False
+        YukiData.remote_record_busy = False
+        YukiData.remote_record_polling = False
+        YukiData.remote_record_poll_time = 0
+
+        def show_state_message(message, seconds=3):
+            YukiData.time_stop = time.time() + seconds
+            YukiData.state.show()
+            YukiData.state.setTextYuki(message)
+
+        def remote_record_adopt(channel_id, state):
+            YukiData.remote_record_channel = channel_id
+            YukiData.remote_record_state = state
+            started = state.get("started_at") if state else None
+            YukiData.remote_record_time = started if started else time.time()
+            YukiData.remote_recording = True
+            YukiData.remote_record_poll_time = time.time()
+
+        def remote_record_clear():
+            YukiData.remote_recording = False
+            YukiData.remote_record_channel = None
+            YukiData.remote_record_state = None
+            YukiData.remote_record_time = None
+
+        @async_gui_blocking_function
+        def remote_record_start_thread(channel_id, channel_name):
+            try:
+                try:
+                    state = remote_record_start(
+                        YukiData.settings["streams_manager_url"],
+                        channel_id,
+                        YukiData.settings["streams_manager_token"],
+                    )
+                    logger.info(
+                        "Streams Manager recording started: "
+                        f"channel '{channel_id}' -> {state.get('path')}"
+                    )
+                    remote_record_adopt(channel_id, state)
+                except RemoteRecordError as exc:
+                    if exc.status == 409 and remote_record_is_active(exc.state):
+                        # Already recording (started elsewhere, or before a
+                        # restart): take it over so the next press stops it.
+                        logger.info(f"Streams Manager already recording '{channel_id}'")
+                        remote_record_adopt(channel_id, exc.state)
+                        YukiData.remote_record_message = _(
+                            "Already recording on server"
+                        )
+                    else:
+                        YukiData.remote_record_message = "{}: {}".format(
+                            _("Server record failed"), exc
+                        )
+            except Exception:
+                logger.warning(traceback.format_exc())
+                YukiData.remote_record_message = _("Server record failed")
+            finally:
+                YukiData.remote_record_busy = False
+
+        @async_gui_blocking_function
+        def remote_record_stop_thread(channel_id):
+            try:
+                try:
+                    state = remote_record_stop(
+                        YukiData.settings["streams_manager_url"],
+                        channel_id,
+                        YukiData.settings["streams_manager_token"],
+                    )
+                    logger.info(
+                        "Streams Manager recording stopped: "
+                        f"channel '{channel_id}', {state.get('bytes_written')} bytes"
+                    )
+                except RemoteRecordError as exc:
+                    if exc.status != 404:
+                        YukiData.remote_record_message = "{}: {}".format(
+                            _("Server record failed"), exc
+                        )
+                        return
+                    # 404: it had already ended on the server. Nothing to do.
+                remote_record_clear()
+            except Exception:
+                logger.warning(traceback.format_exc())
+                YukiData.remote_record_message = _("Server record failed")
+            finally:
+                YukiData.remote_record_busy = False
+
+        @async_gui_blocking_function
+        def remote_record_poll_thread(channel_id):
+            try:
+                state = remote_record_status(
+                    YukiData.settings["streams_manager_url"],
+                    channel_id,
+                    YukiData.settings["streams_manager_token"],
+                )
+                if YukiData.remote_record_channel != channel_id:
+                    return  # stopped or replaced while we were asking
+                if remote_record_is_active(state):
+                    YukiData.remote_record_state = state
+                else:
+                    # Ended on the server side: session stopped, channel
+                    # edited, time limit reached...
+                    reason = (state or {}).get("end_reason") or _("ended")
+                    logger.info(f"Streams Manager recording of '{channel_id}' {reason}")
+                    YukiData.remote_record_message = "{}: {}".format(
+                        _("Server record ended"), reason
+                    )
+                    remote_record_clear()
+            except RemoteRecordError as exc:
+                # Transient: keep the recording state and try again later.
+                logger.warning(f"Streams Manager status check failed: {exc}")
+            except Exception:
+                logger.warning(traceback.format_exc())
+            finally:
+                YukiData.remote_record_polling = False
+
+        def do_record_remote():
+            if YukiData.remote_record_busy:
+                return
+            if YukiData.remote_recording:
+                YukiData.remote_record_busy = True
+                remote_record_stop_thread(YukiData.remote_record_channel)
+                return
+            if not YukiData.playing_channel:
+                show_state_message(_("No channel selected for record"), 1)
+                return
+            if not YukiData.settings["streams_manager_url"].strip():
+                show_state_message(_("Streams Manager URL is not set in settings"))
+                return
+            channel_id = channel_id_for(
+                getArrayItem(YukiData.playing_channel), YukiData.playing_url
+            )
+            if not channel_id:
+                show_state_message(_("Channel has no Streams Manager id"))
+                return
+            YukiData.remote_record_busy = True
+            YukiGUI.lbl2.show()
+            YukiGUI.lbl2.setText(_("Preparing record"))
+            remote_record_start_thread(channel_id, YukiData.playing_channel)
+
+        def timer_remote_record():
+            try:
+                if YukiData.remote_record_message:
+                    message = YukiData.remote_record_message
+                    YukiData.remote_record_message = None
+                    show_state_message(message)
+                if YukiData.remote_recording != YukiData.remote_recording_old:
+                    YukiData.remote_recording_old = YukiData.remote_recording
+                    if YukiData.remote_recording:
+                        YukiGUI.btn_record_remote.setIcon(
+                            YukiGUI.record_remote_stop_icon
+                        )
+                    else:
+                        YukiGUI.btn_record_remote.setIcon(YukiGUI.record_remote_icon)
+                        if not YukiData.is_recording:
+                            YukiGUI.lbl2.setText("")
+                            YukiGUI.lbl2.hide()
+                if YukiData.remote_recording:
+                    # Keep the size current; the server reports it on request.
+                    if (
+                        not YukiData.remote_record_polling
+                        and not YukiData.remote_record_busy
+                        and time.time() - YukiData.remote_record_poll_time >= 2
+                    ):
+                        YukiData.remote_record_poll_time = time.time()
+                        YukiData.remote_record_polling = True
+                        remote_record_poll_thread(YukiData.remote_record_channel)
+                    # A local recording owns the label while it runs; the two
+                    # show the same thing anyway.
+                    if not YukiData.is_recording:
+                        record_time = format_seconds(
+                            time.time() - YukiData.remote_record_time
+                        )
+                        record_size = convert_size(
+                            (YukiData.remote_record_state or {}).get("bytes_written", 0)
+                        )
+                        YukiGUI.lbl2.setText("REC " + record_time + " - " + record_size)
+                        YukiGUI.lbl2.show()
+                elif (
+                    not YukiData.remote_record_busy
+                    and not YukiData.is_recording
+                    and YukiGUI.lbl2.text() == _("Preparing record")
+                ):
+                    # The start request failed; take the placeholder down.
+                    YukiGUI.lbl2.setText("")
+                    YukiGUI.lbl2.hide()
+            except Exception:
+                pass
+
         def my_log(mpv_loglevel1, component, message):
             mpv_log_str = f"[{mpv_loglevel1}] {component}: {message}"
             if "Invalid video timestamp: " not in str(mpv_log_str):
@@ -6277,6 +6484,7 @@ if __name__ == "__main__":
         YukiGUI.btn_fullscreen.clicked.connect(mpv_fullscreen)
         YukiGUI.btn_open_recordings_folder.clicked.connect(open_recording_folder)
         YukiGUI.btn_record.clicked.connect(do_record)
+        YukiGUI.btn_record_remote.clicked.connect(do_record_remote)
         YukiGUI.btn_show_scheduler.clicked.connect(show_scheduler)
         YukiGUI.btn_volume.clicked.connect(mpv_mute)
         YukiGUI.volume_slider.valueChanged.connect(mpv_volume_set_custom)
@@ -7542,6 +7750,7 @@ if __name__ == "__main__":
                 timer_logos_update: 1000,
                 record_timer: 1000,
                 record_timer_2: 1000,
+                timer_remote_record: 1000,
                 timer_afterrecord: 50,
                 timer_bitrate: UPDATE_BR_INTERVAL * 1000,
                 dockwidget_controlpanel_resize_timer: 50,

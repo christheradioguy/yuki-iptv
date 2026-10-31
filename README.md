@@ -25,6 +25,7 @@ The original README for this project can be found below:
 - TV program (EPG) support in XMLTV and JTV formats
 - Save channels as favorites
 - Stream recording
+- Server-side recording through the [Streams Manager](https://github.com/christheradioguy/stream-manager) API
 - Hotkeys
 - Channel search
 - Display of technical information - video / audio codec, bitrate, resolution

@@ -194,6 +194,18 @@ class YukiGUIClass:
         self.btn_record.setIcon(self.record_icon)
         self.btn_record.setToolTip(_("Record"))
 
+        # Recording done by the Streams Manager server rather than locally
+        self.record_remote_icon = QtGui.QIcon(
+            str(Path("yuki_iptv", icons_folder, "record-remote.png"))
+        )
+        self.record_remote_stop_icon = QtGui.QIcon(
+            str(Path("yuki_iptv", icons_folder, "stoprecord-remote.png"))
+        )
+
+        self.btn_record_remote = QtWidgets.QPushButton()
+        self.btn_record_remote.setIcon(self.record_remote_icon)
+        self.btn_record_remote.setToolTip(_("Record on Streams Manager server"))
+
         self.btn_show_scheduler = QtWidgets.QPushButton()
         self.btn_show_scheduler.setIcon(
             QtGui.QIcon(str(Path("yuki_iptv", icons_folder, "calendar.png")))
@@ -289,6 +301,7 @@ class YukiGUIClass:
             self.btn_stop,
             self.btn_fullscreen,
             self.btn_record,
+            self.btn_record_remote,
             self.btn_show_scheduler,
             self.btn_open_recordings_folder,
             self.btn_volume,
@@ -306,6 +319,7 @@ class YukiGUIClass:
             self.btn_stop,
             self.btn_fullscreen,
             self.btn_record,
+            self.btn_record_remote,
             self.btn_volume,
             self.volume_slider,
             self.label_volume,
@@ -674,6 +688,25 @@ class YukiGUIClass:
         self.referer_lbl = QtWidgets.QLabel(_("HTTP Referer:"))
         self.referer_choose = QtWidgets.QLineEdit()
 
+        self.streams_manager_url_lbl = QtWidgets.QLabel(
+            "{}:".format(_("Streams Manager URL"))
+        )
+        self.streams_manager_url_choose = QtWidgets.QLineEdit()
+        self.streams_manager_url_choose.setPlaceholderText("http://127.0.0.1:8409")
+        self.streams_manager_url_choose.setToolTip(
+            _("Used by the 'Record on Streams Manager server' button")
+        )
+        self.streams_manager_token_lbl = QtWidgets.QLabel(
+            "{}:".format(_("Streams Manager token"))
+        )
+        self.streams_manager_token_choose = QtWidgets.QLineEdit()
+        self.streams_manager_token_choose.setEchoMode(
+            QtWidgets.QLineEdit.EchoMode.Password
+        )
+        self.streams_manager_token_choose.setToolTip(
+            _("Only needed if the server was started with STREAMS_MANAGER_TOKEN")
+        )
+
         self.epgdays_p = QtWidgets.QLabel(
             (gettext.ngettext("%d day", "%d days", 0) % 0).replace("0 ", "")
         )
@@ -793,6 +826,10 @@ class YukiGUIClass:
         self.tab_network.layout.addWidget(self.useragent_choose_2, 2, 1)
         self.tab_network.layout.addWidget(self.referer_lbl, 3, 0)
         self.tab_network.layout.addWidget(self.referer_choose, 3, 1)
+        self.tab_network.layout.addWidget(self.streams_manager_url_lbl, 4, 0)
+        self.tab_network.layout.addWidget(self.streams_manager_url_choose, 4, 1)
+        self.tab_network.layout.addWidget(self.streams_manager_token_lbl, 5, 0)
+        self.tab_network.layout.addWidget(self.streams_manager_token_choose, 5, 1)
         self.tab_network.setLayout(self.tab_network.layout)
 
         self.tab_gui.layout = QtWidgets.QGridLayout()
@@ -1291,6 +1328,8 @@ class YukiGUIClass:
             "zoom": self.zoom_def_choose.currentIndex(),
             "panscan": self.panscan_def_choose.value(),
             "referer": self.referer_choose.text(),
+            "streams_manager_url": self.streams_manager_url_choose.text().strip(),
+            "streams_manager_token": self.streams_manager_token_choose.text().strip(),
             "uuid": old_uuid,
         }
 

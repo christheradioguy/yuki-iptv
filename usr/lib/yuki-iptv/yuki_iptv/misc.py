@@ -129,6 +129,16 @@ class YukiData:
     programmes = None
     record_file = None
     recording_time = None
+    # Server-side recording through Streams Manager (btn_record_remote)
+    remote_recording = None
+    remote_recording_old = None
+    remote_record_channel = None
+    remote_record_state = None
+    remote_record_time = None
+    remote_record_busy = None
+    remote_record_polling = None
+    remote_record_poll_time = None
+    remote_record_message = None
     recViaScheduler = None
     rewindWidgetVisible = None
     right_click_menu = None
