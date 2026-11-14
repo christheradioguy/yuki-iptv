@@ -1,3 +1,10 @@
+yuki-iptv (0.0.13.4) unstable; urgency=medium
+
+  * Fix server recording failing with "no channel" for channels that have an
+    EPG id set: take the channel id from the /stream/{id} URL, not tvg-id
+
+ -- Chris Munz-Michielin <chris@frc.is>  Sat, 14 Nov 2026 18:09:28 +0000
+
 yuki-iptv (0.0.13.3) unstable; urgency=medium
 
   * Add a button to record the current channel on a Streams Manager server

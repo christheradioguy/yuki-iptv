@@ -34,6 +34,7 @@
 import re
 import logging
 import requests
+from urllib.parse import quote, unquote
 
 logger = logging.getLogger(__name__)
 
@@ -56,19 +57,23 @@ class RemoteRecordError(Exception):
 def channel_id_for(channel_item, playing_url):
     """The Streams Manager channel id for what is playing.
 
-    The playlist served by Streams Manager puts the channel id in tvg-id, so
-    that is the first choice. Failing that, the id is taken from the stream
-    URL itself, which is always /stream/{id}.
+    The stream URL is always /stream/{id}, so that is the first choice.
+    tvg-id is only a fallback: Streams Manager sets it to the channel's EPG
+    id when one is configured, which is not the channel id.
     """
+    if playing_url:
+        match = _STREAM_PATH.search(str(playing_url))
+        if match:
+            return unquote(match.group(1))
     if channel_item:
         tvg_id = str(channel_item.get("tvg-ID", "") or "").strip()
         if tvg_id:
             return tvg_id
-    if playing_url:
-        match = _STREAM_PATH.search(str(playing_url))
-        if match:
-            return match.group(1)
     return ""
+
+
+def _channel_path(channel_id, suffix=""):
+    return f"/api/channels/{quote(str(channel_id), safe='')}/record{suffix}"
 
 
 def normalize_base_url(url):
@@ -126,7 +131,7 @@ def remote_record_start(base_url, channel_id, token=""):
     """
     try:
         return _request(
-            "POST", base_url, f"/api/channels/{channel_id}/record", token, {}
+            "POST", base_url, _channel_path(channel_id), token, {}
         )
     except RemoteRecordError as exc:
         if exc.status == 409:
@@ -139,13 +144,13 @@ def remote_record_start(base_url, channel_id, token=""):
 
 def remote_record_stop(base_url, channel_id, token=""):
     """Stop recording. Returns the final state. 404 means nothing was recording."""
-    return _request("POST", base_url, f"/api/channels/{channel_id}/record/stop", token)
+    return _request("POST", base_url, _channel_path(channel_id, "/stop"), token)
 
 
 def remote_record_status(base_url, channel_id, token=""):
     """Current (or most recent) recording of a channel, or None if there is none."""
     try:
-        return _request("GET", base_url, f"/api/channels/{channel_id}/record", token)
+        return _request("GET", base_url, _channel_path(channel_id), token)
     except RemoteRecordError as exc:
         if exc.status == 404:
             return None
